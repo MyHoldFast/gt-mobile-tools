@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+MIDlet-1: GT Mobile Tools, /icon.png, Main
+MIDlet-Name: GT Mobile Tools
+MIDlet-Vendor: HoldFast & JGDger
+MIDlet-Version: 4.3
+MIDlet-Icon: /icon.png
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Permissions-Opt: javax.microedition.io.Connector.socket, javax.microedition.io.Connector.file.read, javax.microedition.io.Connector.file.write, javax.microedition.media.control.RecordControl
+Nokia-MIDlet-On-Screen-Keypad: no
+Nokia-MIDlet-S60-Selection-Key-Compatibility: true
+GT-Server: 94.159.98.141:8090
