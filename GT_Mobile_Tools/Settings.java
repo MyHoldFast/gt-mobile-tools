@@ -6,7 +6,7 @@ import javax.microedition.midlet.MIDlet;
 import javax.microedition.rms.RecordStore;
 
 public final class Settings {
-    public static final String DEFAULT_SERVER = "94.159.98.141";
+    public static final String DEFAULT_SERVER = "179.254.142.53";
     public static final int DEFAULT_PORT = 8090;
     private static final String STORE = "GTSettings";
     private static final String MANIFEST_KEY = "GT-Server";

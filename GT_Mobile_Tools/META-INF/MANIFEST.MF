@@ -9,4 +9,4 @@ MicroEdition-Profile: MIDP-2.0
 MIDlet-Permissions-Opt: javax.microedition.io.Connector.socket, javax.microedition.io.Connector.file.read, javax.microedition.io.Connector.file.write, javax.microedition.media.control.RecordControl
 Nokia-MIDlet-On-Screen-Keypad: no
 Nokia-MIDlet-S60-Selection-Key-Compatibility: true
-GT-Server: 94.159.98.141:8090
+GT-Server: 179.254.142.53:8090

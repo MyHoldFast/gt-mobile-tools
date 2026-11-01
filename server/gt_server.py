@@ -1,18 +1,26 @@
+import asyncio
 import os
 import socketserver
 import struct
 import subprocess
 import tempfile
+import threading
 
 import requests
+from gemini_webapi import GeminiClient
 
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("GT_PORT", "8090"))
-HF_TOKEN = os.environ.get("HF_TOKEN", "YOUR_HF_TOKEN")
-HF_STT_URL = "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3-turbo"
+GEMINI_1PSID = os.environ.get("GEMINI_1PSID", "YOUR_1PSID")
+GEMINI_1PSIDTS = os.environ.get("GEMINI_1PSIDTS", "YOUR_1PSIDTS")
 TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single"
 TTS_URL = "https://translate.google.com/translate_tts"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+STT_PROMPT = (
+    "Transcribe the speech in the attached audio exactly as spoken, in its original language. "
+    "Reply with the transcription only: no translation, no comments, no quotes, no formatting. "
+    "If there is no speech, reply with nothing."
+)
 
 IDLE_TIMEOUT = 600
 MAX_FRAME = 2 * 1024 * 1024
@@ -22,6 +30,10 @@ TRANSLATE, SPEAK, RECOGNIZE = 1, 2, 3
 
 http = requests.Session()
 http.headers["User-Agent"] = USER_AGENT
+
+loop = asyncio.new_event_loop()
+threading.Thread(target=loop.run_forever, daemon=True).start()
+gemini = None
 
 
 def java_utf(text):
@@ -99,29 +111,31 @@ def text_to_speech(lang, text):
     return audio
 
 
+async def transcribe(path):
+    global gemini
+    if gemini is None:
+        client = GeminiClient(GEMINI_1PSID, GEMINI_1PSIDTS)
+        await client.init(timeout=120, auto_refresh=True)
+        gemini = client
+    response = await gemini.generate_content(STT_PROMPT, files=[path], temporary=True)
+    return response.text
+
+
 def speech_to_text(audio):
     with tempfile.TemporaryDirectory() as tmp:
         src = os.path.join(tmp, "in")
-        dst = os.path.join(tmp, "out.wav")
+        dst = os.path.join(tmp, "speech.mp3")
         with open(src, "wb") as f:
             f.write(audio)
         subprocess.run(
-            ["ffmpeg", "-i", src, "-vn", "-y", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-f", "wav", dst],
+            ["ffmpeg", "-i", src, "-vn", "-y", "-ar", "16000", "-ac", "1", "-b:a", "32k", dst],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
         if not os.path.exists(dst):
             raise ValueError("Audio conversion failed")
-        with open(dst, "rb") as f:
-            wav = f.read()
-    resp = http.post(
-        HF_STT_URL,
-        headers={"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "audio/wav"},
-        data=wav,
-        timeout=60,
-    )
-    resp.raise_for_status()
-    return resp.json().get("text", "").strip()
+        text = asyncio.run_coroutine_threadsafe(transcribe(dst), loop).result(180)
+    return text.strip().strip("\"'`«»").strip()
 
 
 def dispatch(command, payload):
